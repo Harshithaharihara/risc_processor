@@ -1,0 +1,56 @@
+module risc_processor(
+    input        clk,
+    input        rst,
+    output [3:0] pc_out,
+    output [7:0] instr_out,
+    output [3:0] alu_result,
+    output       carry_flag,
+    output       zero_flag,
+    output [3:0] reg0, reg1, reg2, reg3
+);
+    reg  [3:0] pc;
+    wire [7:0] instruction;
+    wire [2:0] opcode;
+    wire [1:0] rd, rs;
+    wire [3:0] rd_data, rs_data;
+    wire [3:0] alu_out;
+    wire       carry, zero;
+
+    assign opcode = instruction[7:5];
+    assign rd     = instruction[4:3];
+    assign rs     = instruction[2:1];
+
+    instr_mem imem (.addr(pc), .instr(instruction));
+
+    alu_4bit alu (
+        .A(rd_data), .B(rs_data),
+        .op(opcode),
+        .result(alu_out),
+        .carry(carry),
+        .zero(zero)
+    );
+
+    reg_file rf (
+        .clk(clk), .rst(rst),
+        .we(1'b1),
+        .rd_addr(rd), .rs_addr(rs),
+        .write_data(alu_out),
+        .rd_data(rd_data), .rs_data(rs_data)
+    );
+
+    always @(posedge clk or posedge rst) begin
+        if (rst) pc <= 4'b0000;
+        else     pc <= pc + 1;
+    end
+
+    assign pc_out    = pc;
+    assign instr_out = instruction;
+    assign alu_result = alu_out;
+    assign carry_flag = carry;
+    assign zero_flag  = zero;
+    assign reg0 = rf.regs[0];
+    assign reg1 = rf.regs[1];
+    assign reg2 = rf.regs[2];
+    assign reg3 = rf.regs[3];
+endmodule
+
