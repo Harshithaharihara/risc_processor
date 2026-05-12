@@ -1,0 +1,56 @@
+`timescale 1ns/1ps
+
+module tb_risc_processor;
+    reg        clk, rst;
+    wire [3:0] pc_out;
+    wire [7:0] instr_out;
+    wire [3:0] alu_result;
+    wire       carry_flag, zero_flag;
+    wire [3:0] reg0, reg1, reg2, reg3;
+
+    risc_processor uut (
+        .clk(clk), .rst(rst),
+        .pc_out(pc_out), .instr_out(instr_out),
+        .alu_result(alu_result),
+        .carry_flag(carry_flag), .zero_flag(zero_flag),
+        .reg0(reg0), .reg1(reg1), .reg2(reg2), .reg3(reg3)
+    );
+
+    // 10ns clock period
+    initial clk = 0;
+    always #5 clk = ~clk;
+
+    // Initialise registers manually before test
+    initial begin
+        $dumpfile("risc_processor.vcd");
+        $dumpvars(0, tb_risc_processor);
+
+        rst = 1;
+        // Pre-load register values via force (simulation only)
+        #12;
+        uut.rf.regs[0] = 4'b0011;  // R0 = 3
+        uut.rf.regs[1] = 4'b0101;  // R1 = 5
+        uut.rf.regs[2] = 4'b1010;  // R2 = 10
+        uut.rf.regs[3] = 4'b1111;  // R3 = 15
+        rst = 0;
+
+        // Run for 12 instructions
+        repeat (12) @(posedge clk);
+
+        $display("=== Final Register State ===");
+        $display("R0 = %b (%0d)", reg0, reg0);
+        $display("R1 = %b (%0d)", reg1, reg1);
+        $display("R2 = %b (%0d)", reg2, reg2);
+        $display("R3 = %b (%0d)", reg3, reg3);
+        $finish;
+    end
+
+    // Monitor key signals
+    initial begin
+        $monitor("t=%0t | PC=%0d | INSTR=%08b | ALU=%04b | C=%b Z=%b | R0=%0d R1=%0d R2=%0d R3=%0d",
+                  $time, pc_out, instr_out, alu_result,
+                  carry_flag, zero_flag,
+                  reg0, reg1, reg2, reg3);
+    end
+endmodule
+
